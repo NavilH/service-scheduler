@@ -1,0 +1,8 @@
+{
+  "globalHeaders": {
+    "blazor-environment": "Production"
+  },
+  "navigationFallback": {
+    "rewrite": "/index.html"
+  }
+}
