@@ -1,0 +1,146 @@
+@page "/book/{ServiceId:int}"
+@inject ApiService Api
+@inject NavigationManager Nav
+
+<PageTitle>Book Appointment</PageTitle>
+
+<h1>Book: @serviceName</h1>
+
+@if (success)
+{
+    <div class="alert alert-success">
+        Appointment booked! A confirmation email will be sent to @form.CustomerEmail.
+    </div>
+    <a href="/">Back to Services</a>
+}
+else
+{
+    <div class="form-field">
+        <label>Select a Date</label>
+        <input type="date" value="@selectedDate.ToString("yyyy-MM-dd")"
+               min="@DateTime.Today.ToString("yyyy-MM-dd")"
+               @onchange="OnDateChanged" />
+    </div>
+
+    @if (loadingSlots)
+    {
+        <p>Loading available slots...</p>
+    }
+    else if (slots is not null)
+    {
+        @if (!slots.Any())
+        {
+            <p>No availability on this day. Please choose another date.</p>
+        }
+        else
+        {
+            <div class="slot-grid">
+                @foreach (var slot in slots)
+                {
+                    <button class="slot-btn @(selectedSlot == slot ? "selected" : "")"
+                            @onclick="() => SelectSlot(slot)">
+                        @slot.StartTime.ToString("h:mm tt")
+                    </button>
+                }
+            </div>
+        }
+    }
+
+    @if (selectedSlot is not null)
+    {
+        <h3>Your Details</h3>
+        <EditForm Model="form" OnValidSubmit="Submit">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="form-field">
+                <label>Your Name</label>
+                <InputText @bind-Value="form.CustomerName" />
+            </div>
+            <div class="form-field">
+                <label>Email</label>
+                <InputText @bind-Value="form.CustomerEmail" />
+            </div>
+            <div class="form-field">
+                <label>Phone (optional)</label>
+                <InputText @bind-Value="form.CustomerPhone" />
+            </div>
+            <div class="form-field">
+                <label>Notes (optional)</label>
+                <InputTextArea @bind-Value="form.Notes" />
+            </div>
+
+            @if (!string.IsNullOrEmpty(error))
+            {
+                <p class="error">@error</p>
+            }
+
+            <button type="submit" disabled="@submitting">
+                @(submitting ? "Booking..." : $"Confirm — {selectedSlot.StartTime:ddd MMM d} at {selectedSlot.StartTime:h:mm tt}")
+            </button>
+        </EditForm>
+    }
+}
+
+@code {
+    [Parameter] public int ServiceId { get; set; }
+
+    private CreateAppointmentDto form = new();
+    private string serviceName = string.Empty;
+    private DateOnly selectedDate = DateOnly.FromDateTime(DateTime.Today.AddDays(1));
+    private List<AvailableSlotDto>? slots;
+    private AvailableSlotDto? selectedSlot;
+    private bool loadingSlots;
+    private bool submitting;
+    private bool success;
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        form.ServiceItemId = ServiceId;
+        var services = await Api.GetServicesAsync();
+        serviceName = services?.FirstOrDefault(s => s.Id == ServiceId)?.Name ?? "Service";
+        await LoadSlots();
+    }
+
+    private async Task OnDateChanged(ChangeEventArgs e)
+    {
+        if (DateOnly.TryParse(e.Value?.ToString(), out var date))
+        {
+            selectedDate = date;
+            selectedSlot = null;
+            await LoadSlots();
+        }
+    }
+
+    private async Task LoadSlots()
+    {
+        loadingSlots = true;
+        slots = await Api.GetAvailableSlotsAsync(ServiceId, selectedDate);
+        loadingSlots = false;
+    }
+
+    private void SelectSlot(AvailableSlotDto slot)
+    {
+        selectedSlot = slot;
+        form.StartTime = slot.StartTime;
+    }
+
+    private async Task Submit()
+    {
+        submitting = true;
+        error = null;
+        var response = await Api.BookAppointmentAsync(form);
+        submitting = false;
+
+        if (response.IsSuccessStatusCode)
+            success = true;
+        else
+            error = response.StatusCode == System.Net.HttpStatusCode.Conflict
+                ? "That slot was just taken. Please choose another time."
+                : "Something went wrong. Please try again.";
+    }
+}
+
+@using ServiceScheduler.Client.Services
+@using ServiceScheduler.Shared.DTOs

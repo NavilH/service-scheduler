@@ -1,0 +1,48 @@
+@page "/"
+@inject ApiService Api
+@inject NavigationManager Nav
+
+<PageTitle>Book an Appointment</PageTitle>
+
+<h1>Our Services</h1>
+
+@if (services is null)
+{
+    <p>Loading...</p>
+}
+else if (!services.Any())
+{
+    <p>No services available at this time.</p>
+}
+else
+{
+    <div class="service-grid">
+        @foreach (var s in services)
+        {
+            <div class="service-card">
+                <h3>@s.Name</h3>
+                @if (!string.IsNullOrEmpty(s.Description))
+                {
+                    <p>@s.Description</p>
+                }
+                <p><strong>Duration:</strong> @s.DurationMinutes min</p>
+                <p><strong>Price:</strong> $@s.Price.ToString("F2")</p>
+                <button @onclick="() => Book(s.Id)">Book Now</button>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private List<ServiceItemDto>? services;
+
+    protected override async Task OnInitializedAsync()
+    {
+        services = await Api.GetServicesAsync();
+    }
+
+    private void Book(int serviceId) => Nav.NavigateTo($"/book/{serviceId}");
+}
+
+@using ServiceScheduler.Client.Services
+@using ServiceScheduler.Shared.DTOs

@@ -1,0 +1,21 @@
+# Build outputs
+bin/
+obj/
+*.user
+
+# VS/Rider
+.vs/
+.idea/
+*.suo
+
+# Environment / secrets
+appsettings.Development.json
+*.env
+
+# NuGet
+*.nupkg
+.nuget/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,159 @@
+@page "/admin/availability"
+@attribute [Authorize(Roles = "Admin")]
+@inject ApiService Api
+
+<PageTitle>Manage Availability</PageTitle>
+
+<h1>Manage Availability</h1>
+
+<button @onclick="() => showForm = true">+ Add Window</button>
+
+@if (showForm)
+{
+    <div class="form-panel">
+        <h3>New Availability Window</h3>
+        <EditForm Model="form" OnValidSubmit="SaveWindow">
+            <div class="form-field">
+                <label>Day of Week</label>
+                <InputSelect @bind-Value="form.DayOfWeek">
+                    @foreach (var day in Enum.GetValues<DayOfWeek>())
+                    {
+                        <option value="@day">@day</option>
+                    }
+                </InputSelect>
+            </div>
+            <div class="form-field">
+                <label>Start Time</label>
+                <InputDate Type="InputDateType.Time" @bind-Value="form.StartTime" />
+            </div>
+            <div class="form-field">
+                <label>End Time</label>
+                <InputDate Type="InputDateType.Time" @bind-Value="form.EndTime" />
+            </div>
+
+            @if (!string.IsNullOrEmpty(formError))
+            {
+                <p class="error">@formError</p>
+            }
+
+            <button type="submit" disabled="@saving">@(saving ? "Saving..." : "Save")</button>
+            <button type="button" @onclick="CancelForm">Cancel</button>
+        </EditForm>
+    </div>
+}
+
+@if (windows is null)
+{
+    <p>Loading...</p>
+}
+else if (!windows.Any())
+{
+    <p>No availability windows yet. Add one above.</p>
+}
+else
+{
+    <table>
+        <thead>
+            <tr>
+                <th>Day</th>
+                <th>Start</th>
+                <th>End</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var w in windows.OrderBy(w => w.DayOfWeek).ThenBy(w => w.StartTime))
+            {
+                <tr>
+                    <td>@w.DayOfWeek</td>
+                    <td>@w.StartTime.ToString("hh\\:mm tt")</td>
+                    <td>@w.EndTime.ToString("hh\\:mm tt")</td>
+                    <td>
+                        <button @onclick="() => DeleteWindow(w.Id)">Remove</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@if (!string.IsNullOrEmpty(pageMessage))
+{
+    <p class="success">@pageMessage</p>
+}
+
+@code {
+    private List<AvailabilityWindowDto>? windows;
+    private WindowFormModel form = new();
+    private bool showForm;
+    private bool saving;
+    private string? formError;
+    private string? pageMessage;
+
+    protected override async Task OnInitializedAsync() => await LoadWindows();
+
+    private async Task LoadWindows()
+    {
+        windows = await Api.GetAvailabilityAsync();
+    }
+
+    private void CancelForm()
+    {
+        showForm = false;
+        formError = null;
+        form = new();
+    }
+
+    private async Task SaveWindow()
+    {
+        if (form.StartTime >= form.EndTime)
+        {
+            formError = "Start time must be before end time.";
+            return;
+        }
+
+        saving = true;
+        formError = null;
+
+        var response = await Api.CreateAvailabilityWindowAsync(new CreateAvailabilityWindowDto
+        {
+            DayOfWeek = form.DayOfWeek,
+            StartTime = form.StartTime,
+            EndTime = form.EndTime
+        });
+
+        saving = false;
+
+        if (response.IsSuccessStatusCode)
+        {
+            showForm = false;
+            form = new();
+            pageMessage = "Availability window added.";
+            await LoadWindows();
+        }
+        else
+        {
+            formError = "Failed to save. Please try again.";
+        }
+    }
+
+    private async Task DeleteWindow(int id)
+    {
+        var response = await Api.DeleteAvailabilityWindowAsync(id);
+        if (response.IsSuccessStatusCode)
+        {
+            pageMessage = "Window removed.";
+            await LoadWindows();
+        }
+    }
+
+    private class WindowFormModel
+    {
+        public DayOfWeek DayOfWeek { get; set; } = DayOfWeek.Monday;
+        public TimeOnly StartTime { get; set; } = new TimeOnly(9, 0);
+        public TimeOnly EndTime { get; set; } = new TimeOnly(17, 0);
+    }
+}
+
+@using ServiceScheduler.Client.Services
+@using ServiceScheduler.Shared.DTOs

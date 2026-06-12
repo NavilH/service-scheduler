@@ -1,0 +1,216 @@
+@page "/admin/services"
+@attribute [Authorize(Roles = "Admin")]
+@inject ApiService Api
+
+<PageTitle>Manage Services</PageTitle>
+
+<h1>Manage Services</h1>
+
+<button @onclick="ShowCreateForm">+ Add Service</button>
+
+@if (showForm)
+{
+    <div class="form-panel">
+        <h3>@(editingId.HasValue ? "Edit Service" : "New Service")</h3>
+        <EditForm Model="form" OnValidSubmit="SaveService">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="form-field">
+                <label>Name</label>
+                <InputText @bind-Value="form.Name" />
+            </div>
+            <div class="form-field">
+                <label>Description</label>
+                <InputTextArea @bind-Value="form.Description" />
+            </div>
+            <div class="form-field">
+                <label>Duration (minutes)</label>
+                <InputNumber @bind-Value="form.DurationMinutes" />
+            </div>
+            <div class="form-field">
+                <label>Price ($)</label>
+                <InputNumber @bind-Value="form.Price" />
+            </div>
+            @if (editingId.HasValue)
+            {
+                <div class="form-field">
+                    <label>
+                        <InputCheckbox @bind-Value="form.IsActive" /> Active
+                    </label>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(formError))
+            {
+                <p class="error">@formError</p>
+            }
+
+            <button type="submit" disabled="@saving">@(saving ? "Saving..." : "Save")</button>
+            <button type="button" @onclick="CancelForm">Cancel</button>
+        </EditForm>
+    </div>
+}
+
+@if (services is null)
+{
+    <p>Loading...</p>
+}
+else if (!services.Any())
+{
+    <p>No services yet. Add one above.</p>
+}
+else
+{
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Description</th>
+                <th>Duration</th>
+                <th>Price</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var s in services)
+            {
+                <tr class="@(s.IsActive ? "" : "inactive-row")">
+                    <td>@s.Name</td>
+                    <td>@s.Description</td>
+                    <td>@s.DurationMinutes min</td>
+                    <td>$@s.Price.ToString("F2")</td>
+                    <td>@(s.IsActive ? "Active" : "Inactive")</td>
+                    <td>
+                        <button @onclick="() => ShowEditForm(s)">Edit</button>
+                        @if (s.IsActive)
+                        {
+                            <button @onclick="() => DeleteService(s.Id)">Deactivate</button>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@if (!string.IsNullOrEmpty(pageMessage))
+{
+    <p class="success">@pageMessage</p>
+}
+
+@code {
+    private List<ServiceItemDto>? services;
+    private ServiceFormModel form = new();
+    private bool showForm;
+    private bool saving;
+    private int? editingId;
+    private string? formError;
+    private string? pageMessage;
+
+    protected override async Task OnInitializedAsync() => await LoadServices();
+
+    private async Task LoadServices()
+    {
+        services = await Api.GetAllServicesAdminAsync();
+    }
+
+    private void ShowCreateForm()
+    {
+        editingId = null;
+        form = new();
+        formError = null;
+        showForm = true;
+    }
+
+    private void ShowEditForm(ServiceItemDto s)
+    {
+        editingId = s.Id;
+        form = new ServiceFormModel
+        {
+            Name = s.Name,
+            Description = s.Description,
+            DurationMinutes = s.DurationMinutes,
+            Price = s.Price,
+            IsActive = s.IsActive
+        };
+        formError = null;
+        showForm = true;
+    }
+
+    private void CancelForm()
+    {
+        showForm = false;
+        formError = null;
+    }
+
+    private async Task SaveService()
+    {
+        saving = true;
+        formError = null;
+
+        HttpResponseMessage response;
+
+        if (editingId.HasValue)
+        {
+            response = await Api.UpdateServiceAsync(editingId.Value, new UpdateServiceItemDto
+            {
+                Name = form.Name,
+                Description = form.Description,
+                DurationMinutes = form.DurationMinutes,
+                Price = form.Price,
+                IsActive = form.IsActive
+            });
+        }
+        else
+        {
+            response = await Api.CreateServiceAsync(new CreateServiceItemDto
+            {
+                Name = form.Name,
+                Description = form.Description,
+                DurationMinutes = form.DurationMinutes,
+                Price = form.Price
+            });
+        }
+
+        saving = false;
+
+        if (response.IsSuccessStatusCode)
+        {
+            showForm = false;
+            pageMessage = editingId.HasValue ? "Service updated." : "Service created.";
+            await LoadServices();
+        }
+        else
+        {
+            formError = "Failed to save service. Please try again.";
+        }
+    }
+
+    private async Task DeleteService(int id)
+    {
+        var response = await Api.DeleteServiceAsync(id);
+        if (response.IsSuccessStatusCode)
+        {
+            pageMessage = "Service deactivated.";
+            await LoadServices();
+        }
+        else if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+        {
+            pageMessage = "Cannot deactivate — service has active appointments.";
+        }
+    }
+
+    private class ServiceFormModel
+    {
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public int DurationMinutes { get; set; } = 30;
+        public decimal Price { get; set; }
+        public bool IsActive { get; set; } = true;
+    }
+}
+
+@using ServiceScheduler.Client.Services
+@using ServiceScheduler.Shared.DTOs

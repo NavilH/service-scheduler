@@ -1,0 +1,61 @@
+@page "/login"
+@inject ApiService Api
+@inject JwtAuthStateProvider AuthProvider
+@inject NavigationManager Nav
+
+<PageTitle>Admin Login</PageTitle>
+
+<h1>Admin Login</h1>
+
+<EditForm Model="form" OnValidSubmit="Submit">
+    <div class="form-field">
+        <label>Email</label>
+        <InputText @bind-Value="form.Email" />
+    </div>
+    <div class="form-field">
+        <label>Password</label>
+        <InputText type="password" @bind-Value="form.Password" />
+    </div>
+
+    @if (!string.IsNullOrEmpty(error))
+    {
+        <p class="error">@error</p>
+    }
+
+    <button type="submit" disabled="@submitting">
+        @(submitting ? "Logging in..." : "Login")
+    </button>
+</EditForm>
+
+@code {
+    private LoginDto form = new();
+    private string? error;
+    private bool submitting;
+
+    private async Task Submit()
+    {
+        submitting = true;
+        error = null;
+
+        var response = await Api.LoginAsync(form);
+        submitting = false;
+
+        if (!response.IsSuccessStatusCode)
+        {
+            error = "Invalid email or password.";
+            return;
+        }
+
+        var result = await response.Content.ReadFromJsonAsync<AuthResponseDto>();
+        if (result is not null)
+        {
+            await AuthProvider.LoginAsync(result.Token);
+            Nav.NavigateTo("/admin");
+        }
+    }
+}
+
+@using System.Net.Http.Json
+@using ServiceScheduler.Client.Auth
+@using ServiceScheduler.Client.Services
+@using ServiceScheduler.Shared.DTOs

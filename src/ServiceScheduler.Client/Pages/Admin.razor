@@ -1,0 +1,75 @@
+@page "/admin"
+@attribute [Authorize(Roles = "Admin")]
+@inject ApiService Api
+
+<PageTitle>Admin Dashboard</PageTitle>
+
+<h1>Admin Dashboard</h1>
+
+<h2>Appointments</h2>
+
+@if (appointments is null)
+{
+    <p>Loading...</p>
+}
+else if (!appointments.Any())
+{
+    <p>No appointments yet.</p>
+}
+else
+{
+    <table>
+        <thead>
+            <tr>
+                <th>Customer</th>
+                <th>Service</th>
+                <th>Date/Time</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var a in appointments)
+            {
+                <tr>
+                    <td>@a.CustomerName<br /><small>@a.CustomerEmail</small></td>
+                    <td>@a.ServiceName</td>
+                    <td>@a.StartTime.ToString("g")</td>
+                    <td>@a.Status</td>
+                    <td>
+                        @if (a.Status == AppointmentStatus.Pending)
+                        {
+                            <button @onclick="() => UpdateStatus(a.Id, AppointmentStatus.Confirmed)">Confirm</button>
+                            <button @onclick="() => UpdateStatus(a.Id, AppointmentStatus.Cancelled)">Cancel</button>
+                        }
+                        @if (a.Status == AppointmentStatus.Confirmed)
+                        {
+                            <button @onclick="() => UpdateStatus(a.Id, AppointmentStatus.Completed)">Complete</button>
+                            <button @onclick="() => UpdateStatus(a.Id, AppointmentStatus.Cancelled)">Cancel</button>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<AppointmentDto>? appointments;
+
+    protected override async Task OnInitializedAsync()
+    {
+        appointments = await Api.GetAppointmentsAsync();
+    }
+
+    private async Task UpdateStatus(int id, AppointmentStatus status)
+    {
+        await Api.UpdateAppointmentStatusAsync(id, new UpdateAppointmentStatusDto { Status = status });
+        appointments = await Api.GetAppointmentsAsync();
+    }
+}
+
+@using Microsoft.AspNetCore.Authorization
+@using ServiceScheduler.Client.Services
+@using ServiceScheduler.Shared.DTOs
+@using ServiceScheduler.Shared.Models
