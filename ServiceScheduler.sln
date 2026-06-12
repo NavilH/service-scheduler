@@ -11,6 +11,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServiceScheduler.Client", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServiceScheduler.Shared", "src\ServiceScheduler.Shared\ServiceScheduler.Shared.csproj", "{39C40936-C02F-472D-A0E1-F7A6C6B8D4B1}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{B3B69847-DF08-4757-A7F7-4F3D8CF19777}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServiceScheduler.Api.Tests", "tests\ServiceScheduler.Api.Tests\ServiceScheduler.Api.Tests.csproj", "{DE421261-5F32-4F34-AF71-E698D07C5F58}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -32,10 +36,15 @@ Global
 		{39C40936-C02F-472D-A0E1-F7A6C6B8D4B1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{39C40936-C02F-472D-A0E1-F7A6C6B8D4B1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{39C40936-C02F-472D-A0E1-F7A6C6B8D4B1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DE421261-5F32-4F34-AF71-E698D07C5F58}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DE421261-5F32-4F34-AF71-E698D07C5F58}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DE421261-5F32-4F34-AF71-E698D07C5F58}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DE421261-5F32-4F34-AF71-E698D07C5F58}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{FBEF72EF-F64E-4636-A8CE-EC56CA145E57} = {F7F12EBB-B79E-4798-A455-BF77E26F85A8}
 		{194E59E7-902A-4631-9840-BA1B65D13110} = {F7F12EBB-B79E-4798-A455-BF77E26F85A8}
 		{39C40936-C02F-472D-A0E1-F7A6C6B8D4B1} = {F7F12EBB-B79E-4798-A455-BF77E26F85A8}
+		{DE421261-5F32-4F34-AF71-E698D07C5F58} = {B3B69847-DF08-4757-A7F7-4F3D8CF19777}
 	EndGlobalSection
 EndGlobal
