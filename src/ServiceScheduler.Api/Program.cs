@@ -1,5 +1,7 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using ServiceScheduler.Api.Data;
@@ -44,6 +46,27 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+app.UseExceptionHandler(errApp =>
+{
+    errApp.Run(async ctx =>
+    {
+        ctx.Response.ContentType = "application/problem+json";
+        ctx.Response.StatusCode = 500;
+        var problem = new ProblemDetails
+        {
+            Status = 500,
+            Title = "An unexpected error occurred.",
+            Instance = ctx.Request.Path
+        };
+        if (app.Environment.IsDevelopment())
+        {
+            var ex = ctx.Features.Get<IExceptionHandlerFeature>()?.Error;
+            problem.Detail = ex?.ToString();
+        }
+        await ctx.Response.WriteAsJsonAsync(problem);
+    });
+});
 
 app.UseCors();
 app.UseAuthentication();
