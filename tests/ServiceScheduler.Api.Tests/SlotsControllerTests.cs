@@ -112,6 +112,29 @@ public class SlotsControllerTests : IClassFixture<ApiFactory>
         Assert.Empty(slots!);
     }
 
+    [Fact]
+    public async Task GetSlots_ReturnsBadRequest_ForUnknownTimeZone()
+    {
+        var response = await _factory.CreateClient()
+            .GetAsync("/api/slots?serviceId=1&date=2025-12-15&timeZone=Not/ATimeZone");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetSlots_SlotsAreReturnedAsUtc()
+    {
+        var monday = NextWeekday(DayOfWeek.Monday);
+        var (service, _) = await SeedAsync(DayOfWeek.Monday);
+
+        var response = await _factory.CreateClient()
+            .GetAsync($"/api/slots?serviceId={service.Id}&date={monday:yyyy-MM-dd}&timeZone=UTC");
+        var slots = await response.Content.ReadFromJsonAsync<List<AvailableSlotDto>>();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.All(slots!, s => Assert.Equal(DateTimeKind.Utc, s.StartTime.Kind));
+    }
+
     private static DateOnly NextWeekday(DayOfWeek day)
     {
         var date = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(1);

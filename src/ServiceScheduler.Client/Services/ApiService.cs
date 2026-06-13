@@ -22,8 +22,8 @@ public class ApiService(HttpClient http)
         http.DeleteAsync($"api/services/{id}");
 
     // Slots
-    public Task<List<AvailableSlotDto>?> GetAvailableSlotsAsync(int serviceId, DateOnly date) =>
-        http.GetFromJsonAsync<List<AvailableSlotDto>>($"api/slots?serviceId={serviceId}&date={date:yyyy-MM-dd}");
+    public Task<List<AvailableSlotDto>?> GetAvailableSlotsAsync(int serviceId, DateOnly date, string timeZone = "UTC") =>
+        http.GetFromJsonAsync<List<AvailableSlotDto>>($"api/slots?serviceId={serviceId}&date={date:yyyy-MM-dd}&timeZone={Uri.EscapeDataString(timeZone)}");
 
     // Appointments
     public Task<List<AppointmentDto>?> GetAppointmentsAsync() =>
