@@ -83,13 +83,17 @@ A full-stack appointment booking application built with Blazor WebAssembly and A
 
 ### 1. Configure the API
 
-Set the required environment variables (or add to `appsettings.Development.json`):
+Secrets are kept out of source control using [.NET User Secrets](https://learn.microsoft.com/en-us/aspnet/core/security/app-secrets):
 
+```bash
+dotnet user-secrets init --project src/ServiceScheduler.Api
+dotnet user-secrets set "JWT_SECRET" "<your-secret-key>" --project src/ServiceScheduler.Api
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<your-sql-connection-string>" --project src/ServiceScheduler.Api
 ```
-JWT_SECRET=<your-secret-key>
-ConnectionStrings__DefaultConnection=<your-sql-connection-string>
-AllowedOrigin=http://localhost:5196
-```
+
+Non-secret dev config (e.g. `AllowedOrigin`) lives in `appsettings.Development.json`.
+
+In production, secrets are supplied via Azure App Service Application Settings (environment variables). The project already references `Azure.Security.KeyVault.Secrets` and `Azure.Identity` for a Key Vault upgrade path.
 
 ### 2. Apply migrations
 

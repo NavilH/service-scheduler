@@ -9,8 +9,14 @@ using ServiceScheduler.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// In production, secrets are supplied via Azure App Service Application Settings (env vars).
+// To go further, replace with Azure Key Vault + Managed Identity:
+//   builder.Configuration.AddAzureKeyVault(new Uri(builder.Configuration["KeyVaultUri"]!), new DefaultAzureCredential());
+// Azure.Security.KeyVault.Secrets and Azure.Identity are already referenced.
+// Locally, secrets are stored in .NET User Secrets (dotnet user-secrets set ...).
+
 var jwtSecret = builder.Configuration["JWT_SECRET"]
-    ?? throw new InvalidOperationException("JWT_SECRET environment variable is not set.");
+    ?? throw new InvalidOperationException("JWT_SECRET is not configured.");
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
