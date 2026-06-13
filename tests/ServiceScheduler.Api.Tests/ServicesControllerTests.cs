@@ -98,6 +98,34 @@ public class ServicesControllerTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task Update_ReturnsNoContent_WhenAdmin()
+    {
+        using var db = _factory.CreateDbContext();
+        var service = new ServiceItem { Name = "Update Me", DurationMinutes = 30, Price = 40, IsActive = true };
+        db.ServiceItems.Add(service);
+        await db.SaveChangesAsync();
+
+        var dto = new UpdateServiceItemDto { Name = "Updated Name", DurationMinutes = 45, Price = 55, IsActive = true };
+        var response = await _factory.CreateAdminClient().PutAsJsonAsync($"/api/services/{service.Id}", dto);
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        using var verifyDb = _factory.CreateDbContext();
+        var updated = await verifyDb.ServiceItems.FindAsync(service.Id);
+        Assert.Equal("Updated Name", updated!.Name);
+        Assert.Equal(45, updated.DurationMinutes);
+    }
+
+    [Fact]
+    public async Task Create_ReturnsBadRequest_WhenDurationIsOutOfRange()
+    {
+        var dto = new CreateServiceItemDto { Name = "Bad Duration", DurationMinutes = 0, Price = 50 };
+
+        var response = await _factory.CreateAdminClient().PostAsJsonAsync("/api/services", dto);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Delete_ReturnsConflict_WhenActiveAppointmentsExist()
     {
         using var db = _factory.CreateDbContext();

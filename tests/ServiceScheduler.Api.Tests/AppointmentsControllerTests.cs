@@ -119,4 +119,38 @@ public class AppointmentsControllerTests : IClassFixture<ApiFactory>
         var updated = await verifyDb.Appointments.FindAsync(appointment.Id);
         Assert.Equal(AppointmentStatus.Confirmed, updated!.Status);
     }
+
+    [Fact]
+    public async Task GetAll_ReturnsUnauthorized_WhenNotAuthenticated()
+    {
+        var response = await _factory.CreateClient().GetAsync("/api/appointments");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task UpdateStatus_ReturnsNotFound_WhenAppointmentDoesNotExist()
+    {
+        var dto = new UpdateAppointmentStatusDto { Status = AppointmentStatus.Confirmed };
+        var response = await _factory.CreateAdminClient()
+            .PatchAsJsonAsync("/api/appointments/99999/status", dto);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Book_ReturnsBadRequest_WhenRequiredFieldsMissing()
+    {
+        var dto = new CreateAppointmentDto
+        {
+            ServiceItemId = 1,
+            CustomerName = "",
+            CustomerEmail = "not-an-email",
+            StartTime = default
+        };
+
+        var response = await _factory.CreateClient().PostAsJsonAsync("/api/appointments", dto);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
 }
